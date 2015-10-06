@@ -1,30 +1,21 @@
-import sun.security.util.ObjectIdentifier;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
-import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 
 /**
  * Created by vlad on 05.10.15.
  */
+
 public class Window extends JFrame{
-    String path;
-    String username = System.getProperty("user.name");
-    String link = "https://github.com/drvirtuozov/minecraft-client-mods-1710/archive/master.zip";
+    String path, minePath;
+    static String USERNAME = System.getProperty("user.name");
+    static String OSNAME = System.getProperty("os.name").toLowerCase();
+    static String LINK = "https://github.com/drvirtuozov/minecraft-client-mods-1710/archive/master.zip";
 
     JButton b1;
     EventHandler handler = new EventHandler();
@@ -35,6 +26,17 @@ public class Window extends JFrame{
         b1 = new JButton("Update mods");
         add(b1);
         b1.addActionListener(handler);
+
+
+        if (OSNAME == "windows") {
+            path = "C:\\Users\\" + USERNAME + "\\AppData\\Roaming\\.minecraft\\mods\\";
+            minePath = "C:\\Users\\" + USERNAME + "\\AppData\\Roaming\\.minecraft\\";
+        }
+        else {
+            path = "/home/" + USERNAME + "/.minecraft/mods/";
+            minePath = "/home/" + USERNAME + "/.minecraft/";
+        }
+
     }
 
     public class EventHandler implements ActionListener {
@@ -48,50 +50,52 @@ public class Window extends JFrame{
     }
 
     public void updateMods() {
-        if (System.getProperty("os.name").toLowerCase() == "windows") {
-            path = "C:\\Users\\" + username + "\\AppData\\Roaming\\.minecraft\\mods\\";
+        b1.setEnabled(false);
+        File minecraft = new File(minePath);
+
+        if (minecraft.exists()) {
+            File folder = new File(path);
+
+            if (folder.exists()) {
+                rmdir(folder);
+            }
+            else {
+                folder.mkdir();
+            }
+
+            try {
+                download(path + "mods.zip");
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                unzip(path + "mods.zip", path);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         else {
-            path = "/home/" + username + "/.minecraft/mods/";
-        }
-
-        b1.setEnabled(false);
-        File folder = new File(path);
-        rmdir(folder);
-
-        try {
-            download(path + "mods.zip");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        try {
-            unzip(path + "mods.zip", path);
-        } catch (IOException e) {
-            e.printStackTrace();
+            b1.setText("Minecraft is not installed!");
+            b1.setEnabled(true);
         }
     }
 
     public void rmdir(File folder) {
-        if (folder.exists()) {
-            b1.setText("Deleting old mods...");
-            File[] list = folder.listFiles();
-            for (int i = 0; i < list.length; i++) {
-                File tmpF = list[i];
-                if (tmpF.isDirectory()) {
-                    rmdir(tmpF);
-                }
-                list[i].delete();
+        b1.setText("Deleting old mods...");
+        File[] list = folder.listFiles();
+        for (int i = 0; i < list.length; i++) {
+            File tempFile = list[i];
+            if (tempFile.isDirectory()) {
+                rmdir(tempFile);
             }
-        }
-        else {
-            b1.setText("Minecraft not found.");
+            list[i].delete();
         }
     }
 
     public void download(String destinationFile) throws IOException {
         b1.setText("Downloading new mods...");
-        URL url = new URL(link);
+        URL url = new URL(LINK);
         InputStream is = url.openStream();
         OutputStream os = new FileOutputStream(destinationFile);
 
@@ -111,8 +115,8 @@ public class Window extends JFrame{
         ZipEntry entry = zipIn.getNextEntry();
 
         while (entry != null) {
-            String entryname = entry.getName();
-            String filePath = destDirectory + entryname.substring(entryname.lastIndexOf("/") + 1, entryname.length());
+            String entryName = entry.getName();
+            String filePath = destDirectory + entryName.substring(entryName.lastIndexOf("/") + 1, entryName.length());
             if (!entry.isDirectory()) {
                 extractFile(zipIn, filePath);
             }
@@ -134,7 +138,8 @@ public class Window extends JFrame{
 
         File file = new File(path + "mods.zip");
         file.delete();
-        b1.setEnabled(true);
         b1.setText("Done!");
     }
+
+
 }
