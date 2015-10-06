@@ -1,4 +1,7 @@
+import com.sun.javafx.scene.layout.region.Margins;
+
 import javax.swing.*;
+import javax.swing.text.StyledEditorKit;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -14,27 +17,51 @@ import java.util.zip.ZipInputStream;
 public class Window extends JFrame{
     String path, minePath;
     static String USERNAME = System.getProperty("user.name");
-    static String OSNAME = System.getProperty("os.name").toLowerCase();
+    static String OSNAME = System.getProperty("os.name");
     static String LINK = "https://github.com/drvirtuozov/minecraft-client-mods-1710/archive/master.zip";
 
-    JButton b1;
+    JButton button;
+    Label label;
     EventHandler handler = new EventHandler();
 
     public Window(String s){
         super(s);
-        setLayout(new FlowLayout());
-        b1 = new JButton("Update mods");
-        add(b1);
-        b1.addActionListener(handler);
+        setLayout(null);
+        try {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (UnsupportedLookAndFeelException e) {
+            e.printStackTrace();
+        }
+        button = new JButton("Update mods");
+        button.setFocusPainted(false);
+        button.setBounds(50, 10, 150, 50);
+        button.addActionListener(handler);
 
-
-        if (OSNAME == "windows") {
-            path = "C:\\Users\\" + USERNAME + "\\AppData\\Roaming\\.minecraft\\mods\\";
-            minePath = "C:\\Users\\" + USERNAME + "\\AppData\\Roaming\\.minecraft\\";
+        label = new Label();
+        if (OSNAME.contains("Linux")) {
+            label.setBounds(0, 60, 250, 12);
         }
         else {
+            label.setBounds(0, 58, 250, 12);
+        }
+        label.setFont(new Font("Arial", Font.PLAIN, 11));
+
+        add(button);
+        add(label);
+
+        if (OSNAME.contains("Linux")) {
             path = "/home/" + USERNAME + "/.minecraft/mods/";
             minePath = "/home/" + USERNAME + "/.minecraft/";
+        }
+        else {
+            path = "C:\\Users\\" + USERNAME + "\\AppData\\Roaming\\.minecraft\\mods\\";
+            minePath = "C:\\Users\\" + USERNAME + "\\AppData\\Roaming\\.minecraft\\";
         }
 
     }
@@ -42,7 +69,7 @@ public class Window extends JFrame{
     public class EventHandler implements ActionListener {
 
         public void actionPerformed(ActionEvent e) {
-            if(e.getSource() == b1) {
+            if(e.getSource() == button) {
                 updateMods();
             }
         }
@@ -50,7 +77,7 @@ public class Window extends JFrame{
     }
 
     public void updateMods() {
-        b1.setEnabled(false);
+        button.setEnabled(false);
         File minecraft = new File(minePath);
 
         if (minecraft.exists()) {
@@ -74,15 +101,19 @@ public class Window extends JFrame{
             } catch (IOException e) {
                 e.printStackTrace();
             }
+            File file = new File(path + "mods.zip");
+            file.delete();
+            button.setText("Done!");
+            label.setText("");
         }
         else {
-            b1.setText("Minecraft is not installed!");
-            b1.setEnabled(true);
+            button.setText("Minecraft is not installed!");
+            button.setEnabled(true);
         }
     }
 
     public void rmdir(File folder) {
-        b1.setText("Deleting old mods...");
+        label.setText("Deleting old mods...");
         File[] list = folder.listFiles();
         for (int i = 0; i < list.length; i++) {
             File tempFile = list[i];
@@ -94,7 +125,7 @@ public class Window extends JFrame{
     }
 
     public void download(String destinationFile) throws IOException {
-        b1.setText("Downloading new mods...");
+        label.setText("Downloading new mods...");
         URL url = new URL(LINK);
         InputStream is = url.openStream();
         OutputStream os = new FileOutputStream(destinationFile);
@@ -111,6 +142,7 @@ public class Window extends JFrame{
     }
 
     public void unzip(String zipFilePath, String destDirectory) throws IOException {
+        label.setText("Extracting...");
         ZipInputStream zipIn = new ZipInputStream(new FileInputStream(zipFilePath));
         ZipEntry entry = zipIn.getNextEntry();
 
@@ -135,10 +167,6 @@ public class Window extends JFrame{
             bos.write(bytesIn, 0, read);
         }
         bos.close();
-
-        File file = new File(path + "mods.zip");
-        file.delete();
-        b1.setText("Done!");
     }
 
 
