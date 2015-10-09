@@ -1,12 +1,12 @@
-import com.sun.javafx.scene.layout.region.Margins;
-
 import javax.swing.*;
-import javax.swing.text.StyledEditorKit;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.SocketException;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -17,11 +17,10 @@ import java.util.zip.ZipInputStream;
 public class Window extends JFrame{
     String path, minePath;
     static String USERNAME = System.getProperty("user.name");
-    static String OSNAME = System.getProperty("os.name");
+    static String OSNAME = System.getProperty("os.name").toLowerCase();
     static String LINK = "https://github.com/drvirtuozov/minecraft-client-mods-1710/archive/master.zip";
-
     JButton button;
-    Label label;
+    JLabel label;
     EventHandler handler = new EventHandler();
 
     public Window(String s){
@@ -43,77 +42,108 @@ public class Window extends JFrame{
         button.setBounds(50, 10, 150, 50);
         button.addActionListener(handler);
 
-        label = new Label();
-        if (OSNAME.contains("Linux")) {
-            label.setBounds(0, 60, 250, 12);
+        label = new JLabel();
+        if (OSNAME.contains("windows")) {
+            label.setBounds(2, 60, 250, 11);
         }
         else {
-            label.setBounds(0, 58, 250, 12);
+            label.setBounds(3, 61, 250, 11);
         }
         label.setFont(new Font("Arial", Font.PLAIN, 11));
 
         add(button);
         add(label);
 
-        if (OSNAME.contains("Linux")) {
+        if (OSNAME.contains("linux")) {
             path = "/home/" + USERNAME + "/.minecraft/mods/";
             minePath = "/home/" + USERNAME + "/.minecraft/";
         }
-        else {
+        if (OSNAME.contains("windows")) {
             path = "C:\\Users\\" + USERNAME + "\\AppData\\Roaming\\.minecraft\\mods\\";
             minePath = "C:\\Users\\" + USERNAME + "\\AppData\\Roaming\\.minecraft\\";
         }
-
+        if (OSNAME.contains("mac")) {
+            path = "/Users/" + USERNAME + "/Library/Application Support/minecraft/mods/";
+            minePath = "/Users/" + USERNAME + "/Library/Application Support/minecraft/";
+        }
     }
 
     public class EventHandler implements ActionListener {
-
         public void actionPerformed(ActionEvent e) {
             if(e.getSource() == button) {
-                updateMods();
+                Thread t1 = new Thread(updateMods);
+                t1.start();
             }
         }
-
     }
 
-    public void updateMods() {
-        button.setEnabled(false);
-        File minecraft = new File(minePath);
+    Runnable updateMods = new Runnable() {
+        public void run() {
+            button.setEnabled(false);
+            File minecraft = new File(minePath);
 
-        if (minecraft.exists()) {
-            File folder = new File(path);
+            if (minecraft.exists()) {
+                File folder = new File(path);
 
-            if (folder.exists()) {
-                rmdir(folder);
+                if (folder.exists()) {
+                    rmdir(folder);
+                }
+                else {
+                    folder.mkdir();
+                }
+
+                try {
+                    try {
+                        URL url = new URL(LINK);
+                        HttpURLConnection httpConn = null;
+                        httpConn = (HttpURLConnection) url.openConnection();
+                        int responseCode = httpConn.getResponseCode();
+
+                        if (responseCode == HttpURLConnection.HTTP_OK) {
+                            try {
+                                download(url, path + "mods.zip");
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+
+                            try {
+                                unzip(path + "mods.zip", path);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            File file = new File(path + "mods.zip");
+                            file.delete();
+                            button.setText("Done!");
+                            label.setText("");
+                        } else {
+                            label.setText("Error. Server replied HTTP code: " + responseCode);
+                            button.setEnabled(true);
+                            button.setText("Update mods");
+                        }
+                        httpConn.disconnect();
+                    } catch (UnknownHostException e) {
+                        label.setText("Error. Check your internet connection.");
+                        button.setEnabled(true);
+                        button.setText("Update mods");
+                    } catch (SocketException e) {
+                        label.setText("Error. Check your internet connection.");
+                        button.setEnabled(true);
+                        button.setText("Update mods");
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
             else {
-                folder.mkdir();
+                button.setText("Minecraft is not installed!");
+                button.setEnabled(true);
             }
-
-            try {
-                download(path + "mods.zip");
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-            try {
-                unzip(path + "mods.zip", path);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            File file = new File(path + "mods.zip");
-            file.delete();
-            button.setText("Done!");
-            label.setText("");
         }
-        else {
-            button.setText("Minecraft is not installed!");
-            button.setEnabled(true);
-        }
-    }
+    };
 
     public void rmdir(File folder) {
         label.setText("Deleting old mods...");
+        button.setText("Please wait...");
         File[] list = folder.listFiles();
         for (int i = 0; i < list.length; i++) {
             File tempFile = list[i];
@@ -124,21 +154,20 @@ public class Window extends JFrame{
         }
     }
 
-    public void download(String destinationFile) throws IOException {
+    public void download(URL url, String destinationFile) throws IOException {
         label.setText("Downloading new mods...");
-        URL url = new URL(LINK);
-        InputStream is = url.openStream();
-        OutputStream os = new FileOutputStream(destinationFile);
+            InputStream is = url.openStream();
+            OutputStream os = new FileOutputStream(destinationFile);
+            byte[] b = new byte[2048];
+            int length;
 
-        byte[] b = new byte[2048];
-        int length;
+            while ((length = is.read(b)) != -1) {
+                os.write(b, 0, length);
+            }
 
-        while ((length = is.read(b)) != -1) {
-            os.write(b, 0, length);
-        }
+            is.close();
+            os.close();
 
-        is.close();
-        os.close();
     }
 
     public void unzip(String zipFilePath, String destDirectory) throws IOException {
@@ -168,6 +197,5 @@ public class Window extends JFrame{
         }
         bos.close();
     }
-
 
 }
