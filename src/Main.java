@@ -6,7 +6,7 @@ public class Main {
     public static String path, minePath;
     private static final String USERNAME = System.getProperty("user.name");
     protected static final String OSNAME = System.getProperty("os.name").toLowerCase();
-    public static final String LINK = "https://github.com/drvirtuozov/minecraft-client-mods-1710/archive/master.zip";
+    public static final String LINK = "https://bitbucket.org/drvirtuozov/minecraft-client-mods-1710/get/master.zip";
 
     public static void main(String args[]) {
         if (OSNAME.contains("linux")) {
