@@ -16,8 +16,10 @@ func main() {
 
 func run() error {
 	engine := qml.NewEngine()
-
+	context := engine.Context()
+	context.SetVar("updater", &Updater{})
 	controls, err := engine.LoadFile("qml/app.qml")
+
 	if err != nil {
 		return err
 	}

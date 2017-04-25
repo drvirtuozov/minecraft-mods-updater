@@ -20,9 +20,11 @@ ApplicationWindow {
     anchors.margins: margin
 
     Button {
+      id: button
       text: "Update Mods"
       Layout.fillWidth: true
       Layout.fillHeight: true
+      onClicked: updater.updateMods()
     }
 
     Label {
