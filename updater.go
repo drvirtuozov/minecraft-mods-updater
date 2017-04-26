@@ -6,21 +6,33 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"os/user"
 	"path/filepath"
+	"runtime"
 )
 
 type Updater struct{}
 
-const url string = "https://bitbucket.org/drvirtuozov/minecraft-client-mods-1710/get/master.zip"
+const URL string = "https://bitbucket.org/drvirtuozov/minecraft-client-mods-1710/get/master.zip"
 
 func (u *Updater) UpdateMods() {
 	go func() {
-		//downloadZip(url)
-		unzip("test.zip", filepath.Join(dirname(), "output"))
+		minePath := getMinepath()
+		modsPath := filepath.Join(minePath, "mods")
+
+		if !isExist(minePath) {
+			fmt.Println("Minecraft not installed")
+			return
+		}
+
+		downloadZip(URL)
+		removeDir(modsPath)
+		unzip("test.zip", modsPath)
 	}()
 }
 
 func downloadZip(url string) *os.File {
+	fmt.Println("Downloading new mods...")
 	res, err := http.Get(url)
 	checkError(err)
 	file, err := os.Create("mods.zip")
@@ -32,11 +44,9 @@ func downloadZip(url string) *os.File {
 }
 
 func unzip(srcPath string, destPath string) {
-	if _, err := os.Stat(destPath); err != nil {
-		if os.IsNotExist(err) {
-			err := os.MkdirAll(destPath, 0777)
-			checkError(err)
-		}
+	if !isExist(destPath) {
+		err := os.MkdirAll(destPath, 0777)
+		checkError(err)
 	}
 
 	zipReader, err := zip.OpenReader(srcPath)
@@ -45,7 +55,7 @@ func unzip(srcPath string, destPath string) {
 
 	for _, file := range zipReader.File {
 		if !file.FileInfo().IsDir() {
-			fmt.Println("Unzipping...", filepath.Join(destPath, file.FileInfo().Name()))
+			fmt.Println("Extracting...", filepath.Join(destPath, file.FileInfo().Name()))
 			writer, err := os.Create(filepath.Join(destPath, file.FileInfo().Name()))
 			defer writer.Close()
 			checkError(err)
@@ -68,4 +78,41 @@ func dirname() string {
 	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
 	checkError(err)
 	return dir
+}
+
+func getOSUsername() string {
+	user, err := user.Current()
+	checkError(err)
+	return user.Username
+}
+
+func getMinepath() string {
+	switch runtime.GOOS {
+	case "linux":
+		return "/home/" + getOSUsername() + "/.minecraft/"
+	case "windows":
+		return "C:\\Users\\" + getOSUsername() + "\\AppData\\Roaming\\.minecraft\\"
+	case "mac":
+		return "/Users/" + getOSUsername() + "/Library/Application Support/minecraft/"
+	default:
+		panic("Unable to detect os")
+	}
+}
+
+func isExist(path string) bool {
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+
+		checkError(err)
+	}
+
+	return true
+}
+
+func removeDir(path string) {
+	fmt.Println("Removing old mods...")
+	err := os.RemoveAll(path)
+	checkError(err)
 }
