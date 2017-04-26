@@ -1,7 +1,13 @@
 package main
 
-import "net/http"
-import "os"
+import (
+	"archive/zip"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+)
 
 type Updater struct{}
 
@@ -9,28 +15,57 @@ const url string = "https://bitbucket.org/drvirtuozov/minecraft-client-mods-1710
 
 func (u *Updater) UpdateMods() {
 	go func() {
-		downloadZip(url)
+		//downloadZip(url)
+		unzip("test.zip", filepath.Join(dirname(), "output"))
 	}()
 }
 
-func downloadZip(url string) (*os.File, error) {
+func downloadZip(url string) *os.File {
 	res, err := http.Get(url)
-
-	if err != nil {
-		return nil, err
-	}
-
+	checkError(err)
 	file, err := os.Create("mods.zip")
-
-	if err != nil {
-		return nil, err
-	}
-
+	defer file.Close()
+	checkError(err)
 	err = res.Write(file)
+	checkError(err)
+	return file
+}
 
-	if err != nil {
-		return nil, err
+func unzip(srcPath string, destPath string) {
+	if _, err := os.Stat(destPath); err != nil {
+		if os.IsNotExist(err) {
+			err := os.MkdirAll(destPath, 0777)
+			checkError(err)
+		}
 	}
 
-	return file, nil
+	zipReader, err := zip.OpenReader(srcPath)
+	defer zipReader.Close()
+	checkError(err)
+
+	for _, file := range zipReader.File {
+		if !file.FileInfo().IsDir() {
+			fmt.Println("Unzipping...", filepath.Join(destPath, file.FileInfo().Name()))
+			writer, err := os.Create(filepath.Join(destPath, file.FileInfo().Name()))
+			defer writer.Close()
+			checkError(err)
+			reader, err := file.Open()
+			defer reader.Close()
+			checkError(err)
+			_, err = io.Copy(writer, reader)
+			checkError(err)
+		}
+	}
+}
+
+func checkError(e error) {
+	if e != nil {
+		panic(e)
+	}
+}
+
+func dirname() string {
+	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
+	checkError(err)
+	return dir
 }
