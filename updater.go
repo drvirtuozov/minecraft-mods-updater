@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"os/user"
@@ -25,43 +26,47 @@ func (u *Updater) UpdateMods() {
 			return
 		}
 
-		downloadZip(URL)
+		file := downloadZip()
+		defer file.Close()
+		defer os.Remove(file.Name())
 		removeDir(modsPath)
-		unzip("test.zip", modsPath)
+		unzip(file, modsPath)
 	}()
 }
 
-func downloadZip(url string) *os.File {
+func downloadZip() *os.File {
 	fmt.Println("Downloading new mods...")
-	res, err := http.Get(url)
+	res, err := http.Get(URL)
 	checkError(err)
-	file, err := os.Create("mods.zip")
-	defer file.Close()
+	defer res.Body.Close()
+	file, err := ioutil.TempFile("", "minecraft-mods-")
 	checkError(err)
-	err = res.Write(file)
+	data, err := ioutil.ReadAll(res.Body)
 	checkError(err)
+	file.Write(data)
 	return file
 }
 
-func unzip(srcPath string, destPath string) {
+func unzip(zipFile *os.File, destPath string) {
 	if !isExist(destPath) {
 		err := os.MkdirAll(destPath, 0777)
 		checkError(err)
 	}
 
-	zipReader, err := zip.OpenReader(srcPath)
-	defer zipReader.Close()
+	stat, err := zipFile.Stat()
+	checkError(err)
+	zipReader, err := zip.NewReader(zipFile, stat.Size())
 	checkError(err)
 
 	for _, file := range zipReader.File {
 		if !file.FileInfo().IsDir() {
 			fmt.Println("Extracting...", filepath.Join(destPath, file.FileInfo().Name()))
 			writer, err := os.Create(filepath.Join(destPath, file.FileInfo().Name()))
+			checkError(err)
 			defer writer.Close()
-			checkError(err)
 			reader, err := file.Open()
-			defer reader.Close()
 			checkError(err)
+			defer reader.Close()
 			_, err = io.Copy(writer, reader)
 			checkError(err)
 		}
@@ -92,7 +97,7 @@ func getMinepath() string {
 		return "/home/" + getOSUsername() + "/.minecraft/"
 	case "windows":
 		return "C:\\Users\\" + getOSUsername() + "\\AppData\\Roaming\\.minecraft\\"
-	case "mac":
+	case "darwin":
 		return "/Users/" + getOSUsername() + "/Library/Application Support/minecraft/"
 	default:
 		panic("Unable to detect os")
