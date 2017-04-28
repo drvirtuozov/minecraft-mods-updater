@@ -1,4 +1,2 @@
-/META-INF
-/out
-/.idea
-*.iml
+.vscode
+minecraft-mods-updater
