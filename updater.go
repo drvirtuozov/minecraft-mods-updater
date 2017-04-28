@@ -2,7 +2,6 @@ package main
 
 import (
 	"archive/zip"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -10,6 +9,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"runtime"
+	"strconv"
 )
 
 type Updater struct{}
@@ -18,11 +18,13 @@ const URL string = "https://bitbucket.org/drvirtuozov/minecraft-client-mods-1710
 
 func (u *Updater) UpdateMods() {
 	go func() {
+		Button.Set("text", "Updating...")
+		Button.Set("enabled", false)
 		minePath := getMinepath()
 		modsPath := filepath.Join(minePath, "mods")
 
 		if !isExist(minePath) {
-			fmt.Println("Minecraft not installed")
+			Button.Set("text", "Minecraft not installed")
 			return
 		}
 
@@ -31,11 +33,14 @@ func (u *Updater) UpdateMods() {
 		defer os.Remove(file.Name())
 		removeDir(modsPath)
 		unzip(file, modsPath)
+		Button.Set("text", "Update Mods")
+		Button.Set("enabled", true)
+		Label.Set("text", "Done!")
 	}()
 }
 
 func downloadZip() *os.File {
-	fmt.Println("Downloading new mods...")
+	Label.Set("text", "Downloading new mods...")
 	res, err := http.Get(URL)
 	checkError(err)
 	defer res.Body.Close()
@@ -58,9 +63,9 @@ func unzip(zipFile *os.File, destPath string) {
 	zipReader, err := zip.NewReader(zipFile, stat.Size())
 	checkError(err)
 
-	for _, file := range zipReader.File {
+	for i, file := range zipReader.File {
 		if !file.FileInfo().IsDir() {
-			fmt.Println("Extracting...", filepath.Join(destPath, file.FileInfo().Name()))
+			Label.Set("text", "Extracting... "+strconv.Itoa(i+1)+" of "+strconv.Itoa(len(zipReader.File))+" files")
 			writer, err := os.Create(filepath.Join(destPath, file.FileInfo().Name()))
 			checkError(err)
 			defer writer.Close()
@@ -117,7 +122,7 @@ func isExist(path string) bool {
 }
 
 func removeDir(path string) {
-	fmt.Println("Removing old mods...")
+	Label.Set("text", "Removing old mods...")
 	err := os.RemoveAll(path)
 	checkError(err)
 }

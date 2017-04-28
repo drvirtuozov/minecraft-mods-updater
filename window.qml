@@ -4,6 +4,8 @@ import QtQuick.Layouts 1.0
 
 
 ApplicationWindow {
+  id: window
+  objectName: "window"
   visible: true
   title: "Minecraft Mods Updater"
   property int margin: 11
@@ -16,11 +18,13 @@ ApplicationWindow {
 
   ColumnLayout {
     id: mainLayout
+    objectName: "mainLayout"
     anchors.fill: parent
     anchors.margins: margin
 
     Button {
       id: button
+      objectName: "button"
       text: "Update Mods"
       Layout.fillWidth: true
       Layout.fillHeight: true
@@ -28,6 +32,8 @@ ApplicationWindow {
     }
 
     Label {
+      id: label
+      objectName: "label"
       text: ""
     }
   }
