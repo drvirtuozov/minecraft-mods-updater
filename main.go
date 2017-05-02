@@ -1,37 +1,39 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
-	"github.com/go-qml/qml"
+	"github.com/therecipe/qt/widgets"
 )
 
-var Button qml.Object
-var Label qml.Object
+var Button *widgets.QPushButton
+var Label *widgets.QLabel
 
 func main() {
-	if err := qml.Run(run); err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-}
+	widgets.NewQApplication(len(os.Args), os.Args)
 
-func run() error {
-	engine := qml.NewEngine()
-	context := engine.Context()
-	context.SetVar("updater", new(Updater))
-	component, err := engine.LoadFile("window.qml")
+	window := widgets.NewQMainWindow(nil, 0)
+	window.SetWindowTitle("Minecraft Mods Updater")
+	window.SetMinimumSize2(200, 100)
+	window.SetMaximumSize2(200, 100)
 
-	if err != nil {
-		return err
-	}
+	layout := widgets.NewQVBoxLayout()
 
-	window := component.CreateWindow(nil)
-	layout := window.ObjectByName("mainLayout")
-	Button = layout.ObjectByName("button")
-	Label = layout.ObjectByName("label")
+	widget := widgets.NewQWidget(nil, 0)
+	widget.SetLayout(layout)
+
+	Button = widgets.NewQPushButton2("Update Mods", nil)
+	Button.SetFixedHeight(60)
+	Button.ConnectClicked(func(checked bool) {
+		go UpdateMods()
+	})
+
+	Label = widgets.NewQLabel2("", nil, window.WindowType())
+
+	layout.AddWidget(Button, 0, 0)
+	layout.AddWidget(Label, 0, 0)
+	window.SetCentralWidget(widget)
 	window.Show()
-	window.Wait()
-	return nil
+
+	widgets.QApplication_Exec()
 }
