@@ -12,35 +12,31 @@ import (
 	"strconv"
 )
 
-type Updater struct{}
-
 const URL string = "https://bitbucket.org/drvirtuozov/minecraft-client-mods-1710/get/master.zip"
 
-func (u *Updater) UpdateMods() {
-	go func() {
-		Button.Set("text", "Updating...")
-		Button.Set("enabled", false)
-		minePath := getMinepath()
-		modsPath := filepath.Join(minePath, "mods")
+func UpdateMods() {
+	Button.SetText("Updating...")
+	Button.SetEnabled(false)
+	defer Button.SetText("Update Mods")
+	defer Button.SetEnabled(true)
+	minePath := getMinepath()
+	modsPath := filepath.Join(minePath, "mods")
 
-		if !isExist(minePath) {
-			Button.Set("text", "Minecraft not installed")
-			return
-		}
+	if !isExist(minePath) {
+		Label.SetText("Minecraft not installed")
+		return
+	}
 
-		file := downloadZip()
-		defer file.Close()
-		defer os.Remove(file.Name())
-		removeDir(modsPath)
-		unzip(file, modsPath)
-		Button.Set("text", "Update Mods")
-		Button.Set("enabled", true)
-		Label.Set("text", "Done!")
-	}()
+	file := downloadZip()
+	defer file.Close()
+	defer os.Remove(file.Name())
+	removeDir(modsPath)
+	unzip(file, modsPath)
+	Label.SetText("Done!")
 }
 
 func downloadZip() *os.File {
-	Label.Set("text", "Downloading new mods...")
+	Label.SetText("Downloading new mods...")
 	res, err := http.Get(URL)
 	checkError(err)
 	defer res.Body.Close()
@@ -65,7 +61,7 @@ func unzip(zipFile *os.File, destPath string) {
 
 	for i, file := range zipReader.File {
 		if !file.FileInfo().IsDir() {
-			Label.Set("text", "Extracting... "+strconv.Itoa(i+1)+" of "+strconv.Itoa(len(zipReader.File))+" files")
+			Label.SetText("Extracting... " + strconv.Itoa(i+1) + " of " + strconv.Itoa(len(zipReader.File)) + " files")
 			writer, err := os.Create(filepath.Join(destPath, file.FileInfo().Name()))
 			checkError(err)
 			defer writer.Close()
@@ -122,7 +118,7 @@ func isExist(path string) bool {
 }
 
 func removeDir(path string) {
-	Label.Set("text", "Removing old mods...")
+	Label.SetText("Removing old mods...")
 	err := os.RemoveAll(path)
 	checkError(err)
 }
