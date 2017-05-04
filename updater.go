@@ -15,11 +15,31 @@ import (
 
 const URL string = "https://bitbucket.org/drvirtuozov/minecraft-client-mods-1710/get/master.zip"
 
+type PassThruReader struct {
+	io.Reader
+	total  int64
+	length int64
+}
+
+func (pt *PassThruReader) Read(p []byte) (int, error) {
+	n, err := pt.Reader.Read(p)
+
+	if n > 0 {
+		pt.total += int64(n)
+		percentage := float64(pt.total) / float64(pt.length) * float64(100)
+		Label.SetText("Downloading new mods... " + strconv.Itoa(int(percentage)) + "%")
+	}
+
+	return n, err
+}
+
 func UpdateMods() error {
 	Button.SetText("Updating...")
 	Button.SetEnabled(false)
+	Label.SetText("Removing old mods...")
 	defer Button.SetText("Update Mods")
 	defer Button.SetEnabled(true)
+	defer Label.SetText("Done!")
 	minePath, err := getMinepath()
 
 	if err != nil {
@@ -34,10 +54,9 @@ func UpdateMods() error {
 	}
 
 	if !exists {
-		return errors.New("Minecraft not installed")
+		return errors.New("Minecraft is not installed")
 	}
 
-	Label.SetText("Downloading new mods...")
 	file, err := downloadZip()
 
 	if err != nil {
@@ -46,20 +65,15 @@ func UpdateMods() error {
 
 	defer file.Close()
 	defer os.Remove(file.Name())
-	Label.SetText("Removing old mods...")
-	err = removeDir(modsPath)
 
-	if err != nil {
+	if err := removeDir(modsPath); err != nil {
 		return err
 	}
 
-	err = unzip(file, modsPath)
-
-	if err != nil {
+	if err := unzip(file, modsPath); err != nil {
 		return err
 	}
 
-	Label.SetText("Done!")
 	return nil
 }
 
@@ -77,7 +91,8 @@ func downloadZip() (*os.File, error) {
 		return nil, err
 	}
 
-	data, err := ioutil.ReadAll(res.Body)
+	reader := &PassThruReader{Reader: res.Body, length: res.ContentLength}
+	data, err := ioutil.ReadAll(reader)
 
 	if err != nil {
 		return nil, err
@@ -95,9 +110,7 @@ func unzip(zipFile *os.File, destPath string) error {
 	}
 
 	if !exists {
-		err := os.MkdirAll(destPath, 0777)
-
-		if err != nil {
+		if err := os.MkdirAll(destPath, 0777); err != nil {
 			return err
 		}
 	}
@@ -131,9 +144,8 @@ func unzip(zipFile *os.File, destPath string) error {
 			}
 
 			defer reader.Close()
-			_, err = io.Copy(writer, reader)
 
-			if err != nil {
+			if _, err = io.Copy(writer, reader); err != nil {
 				return err
 			}
 		}
@@ -184,9 +196,7 @@ func isExist(path string) (bool, error) {
 }
 
 func removeDir(path string) error {
-	err := os.RemoveAll(path)
-
-	if err != nil {
+	if err := os.RemoveAll(path); err != nil {
 		return err
 	}
 
