@@ -25,7 +25,13 @@ func main() {
 	Button = widgets.NewQPushButton2("Update Mods", nil)
 	Button.SetFixedHeight(60)
 	Button.ConnectClicked(func(checked bool) {
-		go UpdateMods()
+		go func() {
+			err := UpdateMods()
+
+			if err != nil {
+				Label.SetText(err.Error())
+			}
+		}()
 	})
 
 	Label = widgets.NewQLabel2("", nil, window.WindowType())

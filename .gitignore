@@ -1,2 +1,7 @@
 .vscode
-minecraft-mods-updater
+deploy
+linux
+qml
+*.cpp
+*.qrc
+rcc*.go

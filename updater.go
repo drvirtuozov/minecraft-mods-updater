@@ -2,6 +2,7 @@ package main
 
 import (
 	"archive/zip"
+	"errors"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -14,111 +15,180 @@ import (
 
 const URL string = "https://bitbucket.org/drvirtuozov/minecraft-client-mods-1710/get/master.zip"
 
-func UpdateMods() {
+func UpdateMods() error {
 	Button.SetText("Updating...")
 	Button.SetEnabled(false)
 	defer Button.SetText("Update Mods")
 	defer Button.SetEnabled(true)
-	minePath := getMinepath()
-	modsPath := filepath.Join(minePath, "mods")
+	minePath, err := getMinepath()
 
-	if !isExist(minePath) {
-		Label.SetText("Minecraft not installed")
-		return
+	if err != nil {
+		return err
 	}
 
-	file := downloadZip()
+	modsPath := filepath.Join(minePath, "mods")
+	exists, err := isExist(minePath)
+
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		return errors.New("Minecraft not installed")
+	}
+
+	Label.SetText("Downloading new mods...")
+	file, err := downloadZip()
+
+	if err != nil {
+		return err
+	}
+
 	defer file.Close()
 	defer os.Remove(file.Name())
-	removeDir(modsPath)
-	unzip(file, modsPath)
+	Label.SetText("Removing old mods...")
+	err = removeDir(modsPath)
+
+	if err != nil {
+		return err
+	}
+
+	err = unzip(file, modsPath)
+
+	if err != nil {
+		return err
+	}
+
 	Label.SetText("Done!")
+	return nil
 }
 
-func downloadZip() *os.File {
-	Label.SetText("Downloading new mods...")
+func downloadZip() (*os.File, error) {
 	res, err := http.Get(URL)
-	checkError(err)
+
+	if err != nil {
+		return nil, err
+	}
+
 	defer res.Body.Close()
 	file, err := ioutil.TempFile("", "minecraft-mods-")
-	checkError(err)
+
+	if err != nil {
+		return nil, err
+	}
+
 	data, err := ioutil.ReadAll(res.Body)
-	checkError(err)
+
+	if err != nil {
+		return nil, err
+	}
+
 	file.Write(data)
-	return file
+	return file, nil
 }
 
-func unzip(zipFile *os.File, destPath string) {
-	if !isExist(destPath) {
+func unzip(zipFile *os.File, destPath string) error {
+	exists, err := isExist(destPath)
+
+	if err != nil {
+		return err
+	}
+
+	if !exists {
 		err := os.MkdirAll(destPath, 0777)
-		checkError(err)
+
+		if err != nil {
+			return err
+		}
 	}
 
 	stat, err := zipFile.Stat()
-	checkError(err)
+
+	if err != nil {
+		return err
+	}
+
 	zipReader, err := zip.NewReader(zipFile, stat.Size())
-	checkError(err)
+
+	if err != nil {
+		return err
+	}
 
 	for i, file := range zipReader.File {
 		if !file.FileInfo().IsDir() {
 			Label.SetText("Extracting... " + strconv.Itoa(i+1) + " of " + strconv.Itoa(len(zipReader.File)) + " files")
 			writer, err := os.Create(filepath.Join(destPath, file.FileInfo().Name()))
-			checkError(err)
+
+			if err != nil {
+				return err
+			}
+
 			defer writer.Close()
 			reader, err := file.Open()
-			checkError(err)
+
+			if err != nil {
+				return err
+			}
+
 			defer reader.Close()
 			_, err = io.Copy(writer, reader)
-			checkError(err)
+
+			if err != nil {
+				return err
+			}
 		}
 	}
+
+	return nil
 }
 
-func checkError(e error) {
-	if e != nil {
-		panic(e)
-	}
-}
-
-func dirname() string {
-	dir, err := filepath.Abs(filepath.Dir(os.Args[0]))
-	checkError(err)
-	return dir
-}
-
-func getOSUsername() string {
+func getOSUsername() (string, error) {
 	user, err := user.Current()
-	checkError(err)
-	return user.Username
+
+	if err != nil {
+		return "", err
+	}
+
+	return user.Username, nil
 }
 
-func getMinepath() string {
+func getMinepath() (string, error) {
+	username, err := getOSUsername()
+
+	if err != nil {
+		return "", err
+	}
+
 	switch runtime.GOOS {
 	case "linux":
-		return "/home/" + getOSUsername() + "/.minecraft/"
+		return "/home/" + username + "/.minecraft/", nil
 	case "windows":
-		return "C:\\Users\\" + getOSUsername() + "\\AppData\\Roaming\\.minecraft\\"
+		return "C:\\Users\\" + username + "\\AppData\\Roaming\\.minecraft\\", nil
 	case "darwin":
-		return "/Users/" + getOSUsername() + "/Library/Application Support/minecraft/"
+		return "/Users/" + username + "/Library/Application Support/minecraft/", nil
 	default:
-		panic("Unable to detect os")
+		return "", errors.New("Unable to detect os")
 	}
 }
 
-func isExist(path string) bool {
+func isExist(path string) (bool, error) {
 	if _, err := os.Stat(path); err != nil {
 		if os.IsNotExist(err) {
-			return false
+			return false, nil
 		}
 
-		checkError(err)
+		return false, err
 	}
 
-	return true
+	return true, nil
 }
 
-func removeDir(path string) {
-	Label.SetText("Removing old mods...")
+func removeDir(path string) error {
 	err := os.RemoveAll(path)
-	checkError(err)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
