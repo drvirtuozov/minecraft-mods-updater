@@ -13,33 +13,33 @@ import (
 	"strconv"
 )
 
-const URL string = "https://bitbucket.org/drvirtuozov/minecraft-client-mods-1710/get/master.zip"
+const url string = "https://bitbucket.org/drvirtuozov/minecraft-client-mods-1710/get/master.zip"
 
-type PassThruReader struct {
+type passThruReader struct {
 	io.Reader
 	total  int64
 	length int64
 }
 
-func (pt *PassThruReader) Read(p []byte) (int, error) {
+func (pt *passThruReader) Read(p []byte) (int, error) {
 	n, err := pt.Reader.Read(p)
 
 	if n > 0 {
 		pt.total += int64(n)
 		percentage := float64(pt.total) / float64(pt.length) * float64(100)
-		Label.SetText("Downloading new mods... " + strconv.Itoa(int(percentage)) + "%")
+		label.SetText("Downloading new mods... " + strconv.Itoa(int(percentage)) + "%")
 	}
 
 	return n, err
 }
 
-func UpdateMods() error {
-	Button.SetText("Updating...")
-	Button.SetEnabled(false)
-	Label.SetText("Removing old mods...")
-	defer Button.SetText("Update Mods")
-	defer Button.SetEnabled(true)
-	defer Label.SetText("Done!")
+func updateMods() error {
+	button.SetText("Updating...")
+	button.SetEnabled(false)
+	label.SetText("Removing old mods...")
+	defer button.SetText("Update Mods")
+	defer button.SetEnabled(true)
+	defer label.SetText("Done!")
 	minePath, err := getMinepath()
 
 	if err != nil {
@@ -78,7 +78,7 @@ func UpdateMods() error {
 }
 
 func downloadZip() (*os.File, error) {
-	res, err := http.Get(URL)
+	res, err := http.Get(url)
 
 	if err != nil {
 		return nil, err
@@ -91,7 +91,7 @@ func downloadZip() (*os.File, error) {
 		return nil, err
 	}
 
-	reader := &PassThruReader{Reader: res.Body, length: res.ContentLength}
+	reader := &passThruReader{Reader: res.Body, length: res.ContentLength}
 	data, err := ioutil.ReadAll(reader)
 
 	if err != nil {
@@ -129,7 +129,7 @@ func unzip(zipFile *os.File, destPath string) error {
 
 	for i, file := range zipReader.File {
 		if !file.FileInfo().IsDir() {
-			Label.SetText("Extracting... " + strconv.Itoa(i+1) + " of " + strconv.Itoa(len(zipReader.File)) + " files")
+			label.SetText("Extracting... " + strconv.Itoa(i+1) + " of " + strconv.Itoa(len(zipReader.File)) + " files")
 			writer, err := os.Create(filepath.Join(destPath, file.FileInfo().Name()))
 
 			if err != nil {

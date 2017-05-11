@@ -6,8 +6,8 @@ import (
 	"github.com/therecipe/qt/widgets"
 )
 
-var Button *widgets.QPushButton
-var Label *widgets.QLabel
+var button *widgets.QPushButton
+var label *widgets.QLabel
 
 func main() {
 	widgets.NewQApplication(len(os.Args), os.Args)
@@ -18,20 +18,20 @@ func main() {
 	layout := widgets.NewQVBoxLayout()
 	widget := widgets.NewQWidget(nil, 0)
 	widget.SetLayout(layout)
-	Button = widgets.NewQPushButton2("Update Mods", nil)
-	Button.SetFixedHeight(60)
+	button = widgets.NewQPushButton2("Update Mods", nil)
+	button.SetFixedHeight(60)
 
-	Button.ConnectClicked(func(checked bool) {
+	button.ConnectClicked(func(checked bool) {
 		go func() {
-			if err := UpdateMods(); err != nil {
-				Label.SetText(err.Error())
+			if err := updateMods(); err != nil {
+				label.SetText(err.Error())
 			}
 		}()
 	})
 
-	Label = widgets.NewQLabel2("", nil, window.WindowType())
-	layout.AddWidget(Button, 0, 0)
-	layout.AddWidget(Label, 0, 0)
+	label = widgets.NewQLabel2("", nil, window.WindowType())
+	layout.AddWidget(button, 0, 0)
+	layout.AddWidget(label, 0, 0)
 	window.SetCentralWidget(widget)
 	window.Show()
 	widgets.QApplication_Exec()

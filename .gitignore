@@ -2,6 +2,4 @@
 deploy
 linux
 qml
-*.cpp
-*.qrc
-rcc*.go
+rcc*.*
